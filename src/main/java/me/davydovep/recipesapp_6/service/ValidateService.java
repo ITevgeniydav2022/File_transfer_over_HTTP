@@ -1,19 +1,19 @@
 package me.davydovep.recipesapp_6.service;
 
-import me.davydovep.recipesapp_6.model.Ingredient;
-import me.davydovep.recipesapp_6.model.Recipe;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import me.davydovep.recipesapp_6.model.Ingredient;
+import me.davydovep.recipesapp_6.model.Recipe;
 
 @Service
 public class ValidateService {
-
     public boolean isNotValid(Recipe recipe) {
-        boolean result = StringUtils.isBlank(recipe.getTitle()) ||
+        boolean result = StringUtils.isBlank(recipe.getName()) ||
+                StringUtils.isBlank(recipe.getUnitTime()) ||
                 CollectionUtils.isEmpty(recipe.getIngredients()) ||
                 CollectionUtils.isEmpty(recipe.getSteps()) ||
-                recipe.getCookingTime() > 0;
+                recipe.getCookingTime() < 0;
         if (!result) {
             for (Ingredient ingredient : recipe.getIngredients()) {
                 result = result || isNotValid(ingredient);
@@ -22,11 +22,9 @@ public class ValidateService {
         return result;
     }
 
-
-
     public boolean isNotValid(Ingredient ingredient) {
-        return StringUtils.isBlank(ingredient.getTitle()) ||
+        return StringUtils.isBlank(ingredient.getName()) ||
                 StringUtils.isBlank(ingredient.getMeasureUnit()) ||
-                ingredient.getAmount() > 0;
+                ingredient.getCount() < 0;
     }
 }

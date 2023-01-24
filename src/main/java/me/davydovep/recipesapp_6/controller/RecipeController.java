@@ -1,27 +1,23 @@
 package me.davydovep.recipesapp_6.controller;
 
-
+import org.springframework.web.bind.annotation.*;
+import me.davydovep.recipesapp_6.model.Recipe;
+import me.davydovep.recipesapp_6.service.RecipeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.ResponseEntity;
 import me.davydovep.recipesapp_6.model.Recipe;
 import me.davydovep.recipesapp_6.service.RecipeService;
 import me.davydovep.recipesapp_6.service.ValidateService;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.Map;
 
 @Tag(name = "RecipeController", description = "API для рецептов")
 @RestController
 @RequestMapping("/recipe")
 public class RecipeController {
-
     private final RecipeService recipeService;
     private final ValidateService validateService;
 
@@ -31,100 +27,60 @@ public class RecipeController {
         this.validateService = validateService;
     }
 
+    @Operation(summary = "ПОЛУЧЕНИЕ РЕЦЕПТА ПО ID", description = "Получение рецепта по id")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Все прошло успешно!"),
+            @ApiResponse(responseCode = "400", description = "Некорректные параметры рецепта!")
+    })
+    @GetMapping("/{recipeId}")
+    public ResponseEntity<Recipe> getRecipeById(@PathVariable long recipeId) {
+        return ResponseEntity.of(recipeService.getRecipeById(recipeId));
+    }
+
+    @Operation(summary = "ДОБАВЛЕНИЕ РЕЦЕПТА", description = "Добавление рецептов")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Добавление прошло успешно!"),
+            @ApiResponse(responseCode = "400", description = "Некорректные параметры рецепта!")
+    })
     @PostMapping
-    @Operation(summary = "Добавление рецепта")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200",
-            description = "Рецепт добавлен"),
-            @ApiResponse(responseCode = "400",
-            description = "Некорректные параметры рецепта")
-    })
-    public ResponseEntity<Recipe> add(@RequestBody Recipe recipe) {
-        if (!validateService.isNotValid(recipe)) {
-            return ResponseEntity.badRequest().build();
-        }
-        return ResponseEntity.ok(recipeService.add(recipe));
-    }
-
-    @GetMapping("/{id}")
-    @Operation(summary = "Получение рецепта по id")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200",
-                    description = "Рецепт найден"),
-            @ApiResponse(responseCode = "404",
-                    description = "Рецепта с таким id не найден")
-    })
-    public ResponseEntity<Recipe> get(@PathVariable long id) {
-        return ResponseEntity.of(recipeService.get(id));
-    }
-
-    @PutMapping("/{id}")
-    @Operation(summary = "Редактирование рецепта по id")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200",
-                    description = "Рецепт отредактирован"),
-            @ApiResponse(responseCode = "404",
-                    description = "Рецепт с таким шd не найден"),
-            @ApiResponse(responseCode = "400",
-            description = "Некорректные параметры рецепта")
-    }
-    )
-    public ResponseEntity<Recipe> update(@PathVariable long id,
-                                             @RequestBody Recipe recipe) {
+    public ResponseEntity<Recipe> addRecipe(@RequestBody Recipe recipe) {
         if (validateService.isNotValid(recipe)) {
             return ResponseEntity.badRequest().build();
         }
-        return ResponseEntity.of(recipeService.update(id, recipe));
-    }
-    @DeleteMapping ("/{id}")
-    @Operation(summary = "Удаление рецепта по id")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200",
-                    description = "Рецепт удален"
-            ),
-            @ApiResponse(responseCode = "404",
-                    description = "Рецепт с таким id не найден"
-            )
-    }
-    )
-    public ResponseEntity<Recipe> delete(@PathVariable long id) {
-        return ResponseEntity.of(recipeService.delete(id));
+        return ResponseEntity.ok(recipeService.addRecipe(recipe));
     }
 
-    @GetMapping
-    @Operation(summary = "Получение списка всех рецептов")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200",
-                    description = "Список рецептов получен"
-            ),
-            @ApiResponse(responseCode = "404",
-                    description = "Ни одного рецепта не найдено"
-            )
-    }
-    )
-    public Map<Long, Recipe> getAll() {
-        return recipeService.getAll();
-    }
-
-    @GetMapping("/download")
-    public ResponseEntity<byte[]> download() {
-        byte[] data = recipeService.download();
-        if (data == null) {
+    @Operation(summary = "РЕДАКТИРОВАНИЕ РЕЦЕПТА", description = "Редактирование рецепта")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Редактирование прошло успешно!"),
+            @ApiResponse(responseCode = "400", description = "Некорректные параметры рецепта!")
+    })
+    @PutMapping("/{recipeId}")
+    public ResponseEntity<Recipe> editing(@PathVariable long recipeId,
+                                          @RequestBody Recipe recipe) {
+        if (validateService.isNotValid(recipe)) {
             return ResponseEntity.badRequest().build();
         }
-        return ResponseEntity.ok()
-                .contentLength(data.length)
-                .contentType(MediaType.APPLICATION_JSON)
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"recipes.json\"")
-                .body(data);
+        return ResponseEntity.of(recipeService.editing(recipeId, recipe));
     }
 
-    @PostMapping("/import")
-    public void importData(@RequestParam("file") MultipartFile multipartFile) {
-        try {
-            recipeService.importData(multipartFile.getBytes());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    @Operation(summary = "УДАЛЕНИЕ РЕЦЕПТА", description = "Удаление рецепта")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Удаление прошло успешно!"),
+            @ApiResponse(responseCode = "400", description = "Некорректные параметры ввода!")
+    })
+    @DeleteMapping("/{recipeId}")
+    public ResponseEntity<Recipe> delete(@PathVariable long recipeId) {
+        return ResponseEntity.of(recipeService.delete(recipeId));
+    }
+
+    @Operation(summary = "ПОЛУЧЕНИЕ СПИСКА РЕЦЕПТОВ", description = "Получение всех рецептов")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Получение прошло успешно!"),
+            @ApiResponse(responseCode = "400", description = "Некорректные параметры ввода!")
+    })
+    @GetMapping
+    public Map<Long, Recipe> getAll() {
+        return recipeService.getAll();
     }
 }

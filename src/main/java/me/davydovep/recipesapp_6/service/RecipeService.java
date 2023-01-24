@@ -1,14 +1,13 @@
 package me.davydovep.recipesapp_6.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import me.davydovep.recipesapp_6.model.Recipe;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
+import me.davydovep.recipesapp_6.model.Recipe;
 
 import javax.annotation.PostConstruct;
-import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -18,77 +17,66 @@ import java.util.Optional;
 
 @Service
 public class RecipeService {
-    private final Map<Long, Recipe> recipes = new HashMap<>();
-    private long idGenerator = 1;
-    private final Path pathToFile;
-    private final ObjectMapper objectMapper;
+    private final FilesService filesService;
+    private long recipeIdGenerator = 1;
+    private Map<Long, Recipe> recipes = new HashMap<>();
 
-    public RecipeService(@Value("${application.path.to.recipes}") String path) {
-        this.pathToFile = Paths.get(path);
-        this.objectMapper = new ObjectMapper();
+    public RecipeService(FilesService fileService) {
+        this.filesService = fileService;
     }
 
     @PostConstruct
     public void init() {
-        try {
-            Map<Long, Recipe> fromFile = objectMapper.readValue(Files.readAllBytes(pathToFile),
-                    new TypeReference<>() {
-                    });
-            recipes.putAll(fromFile);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-    private void writeToFile() {
-        try {
-            byte[] data = objectMapper.writeValueAsBytes(recipes);
-            Files.write(pathToFile, data);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        readFromFileRecipes();
     }
 
-    public Recipe add(Recipe recipe) {
-        recipes.put(idGenerator++, recipe);
-        writeToFile();
+    public Recipe addRecipe(Recipe recipe) {
+        recipes.put(recipeIdGenerator++, recipe);
+        saveToFileRecipes();
         return recipe;
     }
 
-    public Optional<Recipe> get(long id) {
-        return Optional.ofNullable(recipes.get(id));
+    public Optional<Recipe> getRecipeById(long recipeId) {
+        return Optional.ofNullable(recipes.get(recipeId));
     }
 
-    public Optional<Recipe> update(long id, Recipe recipe) {
-        Optional<Recipe> result = Optional.ofNullable(recipes.replace(id, recipe));
-        writeToFile();
-        return result;
+    public Optional<Recipe> editing(long recipeId, Recipe recipe) {
+        saveToFileRecipes();
+        return Optional.ofNullable(recipes.replace(recipeId, recipe));
     }
 
-    public Optional<Recipe> delete(long id) {
-        Optional<Recipe> result = Optional.ofNullable(recipes.remove(id));
-        writeToFile();
-        return result;
+    public Optional<Recipe> delete(long recipeId) {
+        return Optional.ofNullable(recipes.remove(recipeId));
     }
 
     public Map<Long, Recipe> getAll() {
         return new HashMap<>(recipes);
     }
 
-    @Nullable
-    public byte[] download() {
+    private void saveToFileRecipes() {
         try {
-            return Files.readAllBytes(pathToFile);
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
+            String json = new ObjectMapper().writeValueAsString(recipes);
+            filesService.saveToFileRecipes(json);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
         }
     }
 
-    public void importData(byte[] data) {
+    private void readFromFileRecipes() {
+        String json = filesService.readFromFileRecipes();
         try {
-            Files.write(pathToFile, data);
-        } catch (IOException e) {
-            e.printStackTrace();
+            recipes = new ObjectMapper().readValue(json, new TypeReference<HashMap<Long, Recipe>>() {
+            });
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
         }
+    }
+
+    public byte[] downloadRecipesFile() {
+        StringBuilder stringBuilder = new StringBuilder();
+        for (Recipe recipe : recipes.values()) {
+            stringBuilder.append(recipe).append("\r\n\n").append("*********************").append("\r\n\n").append("\r\n\n");
+        }
+        return stringBuilder.toString().getBytes(StandardCharsets.UTF_8);
     }
 }

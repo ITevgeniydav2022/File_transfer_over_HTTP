@@ -1,25 +1,21 @@
 package me.davydovep.recipesapp_6.controller;
 
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 import me.davydovep.recipesapp_6.model.Ingredient;
 import me.davydovep.recipesapp_6.service.IngredientService;
 import me.davydovep.recipesapp_6.service.ValidateService;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.Map;
 
 @Tag(name = "IngredientController", description = "API для ингредиентов")
 @RestController
 @RequestMapping("/ingredient")
 public class IngredientController {
-
     private final IngredientService ingredientService;
     private final ValidateService validateService;
 
@@ -29,99 +25,62 @@ public class IngredientController {
         this.validateService = validateService;
     }
 
-    @GetMapping("/{id}")
-    @Operation(summary = "Получение ингредиента по id")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200",
-                    description = "Ингредиент найден"
-            ),
-            @ApiResponse(responseCode = "404",
-                    description = "Ингредиент с таким id не найден"
-            )
-    }
-    )
-    public ResponseEntity<Ingredient> get(@PathVariable long id) {
-        return ResponseEntity.of(ingredientService.get(id));
+    @Operation(summary = "ПОЛУЧЕНИЕ ИНГРЕДИЕНТА ПО ID", description = "Получение ингредиентов по id")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Все прошло успешно!"),
+            @ApiResponse(responseCode = "400", description = "Некорректные параметры ингредиента!")
+    })
+    @GetMapping("/{ingredientId}")
+    public ResponseEntity<Ingredient> getIngredientById(@PathVariable long ingredientId) {
+        return ResponseEntity.of(ingredientService.getIngredientById(ingredientId));
     }
 
-    @PutMapping("/{id}")
-    @Operation(summary = "Редактирование игредиента по id")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200",
-                    description = "Ингредиент отредактирован"
-            ),
-            @ApiResponse(responseCode = "404",
-                    description = "Ингредиент с таким id не найден"
-            ),
-            @ApiResponse(responseCode = "400",
-                    description = "Некорректные параметры игредиента"
-            )
-    }
-    )
-    public ResponseEntity<Ingredient> update(@PathVariable long id,
-                                             @RequestBody Ingredient ingredient) {
-        if (!validateService.isNotValid(ingredient)) {
-            return ResponseEntity.badRequest().build();
-        }
-        return ResponseEntity.of(ingredientService.update(id, ingredient));
-    }
-
+    @Operation(summary = "ДОБАВЛЕНИЕ ИНГРЕДИЕНТА", description = "Добавление ингредиентов")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Добавление прошло успешно!"),
+            @ApiResponse(responseCode = "400", description = "Некорректные параметры рецепта!")
+    })
     @PostMapping
-    @Operation(summary = "Добавление ингредиента", description = "Добавление ингредиента")
-    @ApiResponses(value =
-            {@ApiResponse(responseCode = "200",
-                    description = "Ингредиент добавлен"
-            ),
-            @ApiResponse(responseCode = "400",
-                    description = "Некорректные параметры ингредиента"
-            )
-    }
-    )
-
-    public ResponseEntity<Ingredient> add(@RequestBody Ingredient ingredient) {
-        if (!validateService.isNotValid(ingredient)) {
+    public ResponseEntity<Ingredient> addIngredient(@RequestBody Ingredient ingredient) {
+        if (validateService.isNotValid(ingredient)) {
             return ResponseEntity.badRequest().build();
         }
-        return ResponseEntity.ok(ingredientService.add(ingredient));
+        return ResponseEntity.ok(ingredientService.addIngredient(ingredient));
     }
 
-    @DeleteMapping ("/{id}")
-    @Operation(summary = "Удаление ингредиента по id")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200",
-                    description = "Ингредиент удален"
-            ),
-            @ApiResponse(responseCode = "404",
-                    description = "Ингредиент с таким id не найден"
-            )
-    }
-    )
-    public ResponseEntity<Ingredient> delete(@PathVariable long id) {
-        return ResponseEntity.of(ingredientService.delete(id));
+    @Operation(summary = "РЕДАКТИРОВАНИЕ ИНГРЕДИЕНТА", description = "Редактирование ингредиентов")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Все прошло успешно!"),
+            @ApiResponse(responseCode = "400", description = "Некорректные параметры игредиента!")
+    })
+    @PutMapping("/{ingredientId}")
+    public ResponseEntity<Ingredient> editing(@PathVariable long ingredientId,
+                                              @RequestBody Ingredient ingredient) {
+        if (validateService.isNotValid(ingredient)) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.of(ingredientService.editing(ingredientId, ingredient));
     }
 
+    @Operation(summary = "УДАЛЕНИЕ ИНГРЕДИЕНТА", description = "Удаление ингредиента")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Удаление прошло успешно!"),
+            @ApiResponse(responseCode = "400", description = "Некорректные параметры игредиента!")
+    })
+    @DeleteMapping("/{ingredientId}")
+    public ResponseEntity<Ingredient> delete(@PathVariable long ingredientId) {
+        return ResponseEntity.of(ingredientService.delete(ingredientId));
+    }
+
+    @Operation(summary = "ПОЛУЧЕНИЕ СПИСКА ИНГРЕДИЕНТОВ", description = "Получение всех ингредиентов")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Получение прошло успешно!"),
+            @ApiResponse(responseCode = "400", description = "Некорректные параметры игредиента!")
+    })
     @GetMapping
-    @Operation(summary = "Получение списка ингредиентов")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200",
-                    description = "Список ингредиентов получен"
-            ),
-            @ApiResponse(responseCode = "404",
-                    description = "Ни одного ингредиента не найдено"
-            )
-    }
-    )
     public Map<Long, Ingredient> getAll() {
         return ingredientService.getAll();
     }
 
-    @PostMapping("/import")
-    public void importData(@RequestParam("file") MultipartFile multipartFile) {
-        try {
-            ingredientService.importData(multipartFile.getBytes());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 
 }

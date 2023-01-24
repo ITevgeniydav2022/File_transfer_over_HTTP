@@ -1,85 +1,73 @@
 package me.davydovep.recipesapp_6.service;
 
-
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import me.davydovep.recipesapp_6.model.Ingredient;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import me.davydovep.recipesapp_6.model.Ingredient;
+import me.davydovep.recipesapp_6.model.Recipe;
 
 import javax.annotation.PostConstruct;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
 @Service
 public class IngredientService {
-    private final Map<Long, Ingredient> ingredients = new HashMap<>();
-    private long idGenerator = 1;
-    private final Path pathToFile;
-    private final ObjectMapper objectMapper;
+    private final FilesService filesService;
+    private long ingredientIdGenerator = 1;
+    private Map<Long, Ingredient> ingredients = new HashMap<>();
 
-    public IngredientService(@Value("${application.path.to.ingredients}") String path) {
-        this.pathToFile = Paths.get(path);
-        this.objectMapper = new ObjectMapper();
+    public IngredientService(FilesService filesService) {
+        this.filesService = filesService;
     }
 
     @PostConstruct
     public void init() {
-        try {
-            Map<Long, Ingredient> fromFile = objectMapper.readValue(Files.readAllBytes(pathToFile),
-                    new TypeReference<>() {
-                    });
-            ingredients.putAll(fromFile);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-    private void writeToFile() {
-        try {
-            byte[] data = objectMapper.writeValueAsBytes(ingredients);
-            Files.write(pathToFile, data);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        readFromFileIngredients();
     }
 
-    public Ingredient add(Ingredient ingredient) {
-        ingredients.put(idGenerator++, ingredient);
-        writeToFile();
+    public Ingredient addIngredient(Ingredient ingredient) {
+        ingredients.put(ingredientIdGenerator++, ingredient);
+        saveToFileIngredients();
         return ingredient;
     }
 
-    public Optional <Ingredient> get(long id) {
-        return Optional.ofNullable(ingredients.get(id));
+    public Optional<Ingredient> getIngredientById(long ingredientId) {
+        return Optional.ofNullable(ingredients.get(ingredientId));
     }
 
-    public Optional<Ingredient> update(long id, Ingredient ingredient) {
-        Optional<Ingredient> result = Optional.ofNullable(ingredients.replace(id, ingredient));
-        writeToFile();
-        return result;
+    public Optional<Ingredient> editing(long ingredientId, Ingredient ingredient) {
+        saveToFileIngredients();
+        return Optional.ofNullable(ingredients.replace(ingredientId, ingredient));
     }
 
-    public Optional<Ingredient> delete(long id) {
-        Optional<Ingredient> result = Optional.ofNullable(ingredients.remove(id));
-        writeToFile();
-        return result;
+    public Optional<Ingredient> delete(long ingredientId) {
+        return Optional.ofNullable(ingredients.remove(ingredientId));
     }
 
     public Map<Long, Ingredient> getAll() {
         return new HashMap<>(ingredients);
     }
 
-
-    public void importData(byte[] data) {
+    private void saveToFileIngredients() {
         try {
-            Files.write(pathToFile, data);
-        } catch (IOException e) {
-            e.printStackTrace();
+            String json = new ObjectMapper().writeValueAsString(ingredients);
+            filesService.saveToFileIngredients(json);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
         }
     }
+
+    private void readFromFileIngredients() {
+        String json = filesService.readFromFileIngredients();
+        try {
+            ingredients = new ObjectMapper().readValue(json, new TypeReference<HashMap<Long, Ingredient>>() {
+            });
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 }
